@@ -3,12 +3,12 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "vedasamhitha17/ems-backend:latest"
-        REGISTRY_CREDENTIALS = 'fc16ea1a-882c-49c6-be5a-abb82a0083a4' //Docker credentials
+        REGISTRY_CREDENTIALS = 'fc16ea1a-882c-49c6-be5a-abb82a0083a4' // Docker credentials
         KUBECONFIG_CREDENTIALS = 'kubeconfig'
     }
 
     tools {
-        maven 'Maven'  // Must match the name in Jenkins Maven configuration
+        maven 'Maven' // Must match the name in Jenkins Maven configuration
     }
 
     stages {
@@ -20,14 +20,14 @@ pipeline {
 
         stage('Build with Maven') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                bat 'mvn clean package -DskipTests'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}")
+                    bat "docker build -t ${DOCKER_IMAGE} ."
                 }
             }
         }
@@ -39,8 +39,8 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh """
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    bat """
+                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
                         docker push ${DOCKER_IMAGE}
                         docker logout
                     """
@@ -51,13 +51,13 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG_FILE')]) {
-                    sh '''
-                        export KUBECONFIG=$KUBECONFIG_FILE
+                    bat """
+                        set KUBECONFIG=%KUBECONFIG_FILE%
                         kubectl apply -f ems-deployment.yml
                         kubectl apply -f ems-service.yml
                         kubectl apply -f mysql-deployment.yml
                         kubectl apply -f mysql-service.yml
-                    '''
+                    """
                 }
             }
         }
